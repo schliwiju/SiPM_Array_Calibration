@@ -15,6 +15,10 @@
 #include <TLegend.h>
 #include <THStack.h>
 #include <THistPainter.h>
+#include <TText.h>
+#include <TSpectrum.h> // peakfinder
+#include <TPolyMarker.h> // peakfinder
+#include <TError.h> // root verbosity level
 //#include <TStyle.h>
 
 //C, C++
@@ -39,7 +43,8 @@ float pe = 47.46;//mV*ns
 //vector<float> pe_SiPM = {32.14, 39.33, 34.20, 30.79, 34.09, 29.99, 30.69, 29.95}; //a,b,c,d,e,f,g,h  -  Gain-Baseline from fit
 vector<float> pe_SiPM = {42.01, 34.67, 34.28, 33.84, 37.55, 34.68, 33.81, 38.84}; //sorted by Wavecatcher-Channel
 vector<float> SiPM_shift = {2.679, 2.532, 3.594, 3.855, 3.354, 3.886, 3.865, 4.754};
-int wavesPrintRate = 100;
+vector<float> calib_amp_AB = {10.072,9.24254,8.88147,9.57771,9.58071,9.14965,9.53239,6.74035,9.62728,9.62879,10.0288,10.3354,9.75948,9.53048,9.68774,1};
+int wavesPrintRate = 1000;
 int ch0PrintRate = 1000000;
 int trigPrintRate = 1000000;//100
 int signalPrintRate = 100000;//100
@@ -70,6 +75,7 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   which is the saved in /runs/runName/out.root.
   */
 
+  /*Formerly used in TB17 analysis when calculation CFD. Not used in TB18 */
   TF1* fTrigFit = new TF1("fTrigFit","gaus");
   fTrigFit->SetParameter(0,800);
   fTrigFit->SetParameter(2,1);
@@ -118,17 +124,28 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   int nActiveCh = -1;
   Int_t ChannelNr[16];
   Int_t WOMID[16];  //1=A, 2=B, 3=C, 4=D
+  float PE_WOM1, PE_WOM2;
   std::vector<float> amp(16,-999);
+  std::vector<float> amp_inRange(16,-999);
   std::vector<float> max(16,-999);
   std::vector<float> min(16,-999);
   Float_t t[16];
   Float_t tSiPM[16];
-  Float_t BL[16];//store baseline for 16 channels
-  Float_t BL_RMS[16];//store rms of baseline for 16 channels
-  float BL_output[2];//array used for output getBL-function
+
+  Float_t BL_lower[16];//store baseline for 16 channels for 0-75ns range
+  Float_t BL_RMS_lower[16];//store rms of baseline for 16 channels for 0-75ns range
+  Float_t BL_Chi2_lower[16];//store chi2/dof of baseline-fit for 16 channels for 0-75ns range
+  Float_t BL_upper[16];//store baseline for 16 channels for 220-320ns range
+  Float_t BL_RMS_upper[16];//store rms of baseline for 16 channels for 220-320ns range
+  Float_t BL_Chi2_upper[16];//store chi2/dof of baseline-fit for 16 channels for 220-320ns range
+  float BL_output[3];//array used for output getBL-function
   float Integral_0_300[16];//array used to store Integral of signal from 0 to 300ns
+
+  int nPeaks = 4; // maximum number of peaks to be stored by peakfinder; has to be set also when creating branch
+  Double_t peakX[16][nPeaks];
+  Double_t peakY[16][nPeaks];
+
   float Integral[16];
-  float Integral_Correction;
   float Integral_mVns[16];
   int NumberOfBins;
   Int_t EventIDsamIndex[16];
@@ -200,8 +217,7 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   tree->Branch("vert",&vertical,"vert/F");//vertical position of the box, units: [cm]
   tree->Branch("angle",&angle,"angle/F");
   tree->Branch("pdgID",&pdgID,"pdgID/I");
-  // tree->Branch("WOMID",&WOMID,"WOMID/I");
-  tree->Branch("WOMID",WOMID, "WOMID[nCh]/I");
+  // tree->Branch("WOMID",WOMID,"WOMID[nCh]/I");
   tree->Branch("energy",&energy,"energy/F");
   tree->Branch("isSP",&isSP,"isSP/I");
   tree->Branch("mp",&mp,"mp/I");
@@ -218,17 +234,26 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   tree->Branch("isTrig",&isTrig,"isTrig/I");
   tree->Branch("isGoodSignal_5",&isGoodSignal_5,"isGoodSignal_5/I");
   tree->Branch("nCh",&nCh, "nCh/I");
+  tree->Branch("WOMID",WOMID,"WOMID[nCh]/I");
   tree->Branch("ch",ChannelNr, "ch[nCh]/I");
   tree->Branch("amp",amp.data(), "amp[nCh]/F");
+  tree->Branch("amp_inRange",amp_inRange.data(), "amp_inRange[nCh]/F");
   tree->Branch("max",max.data(), "max[nCh]/F");
   tree->Branch("min",min.data(), "min[nCh]/F");
   tree->Branch("t",t, "t[nCh]/F");
   tree->Branch("tSiPM", tSiPM, "tSiPM[nCh]/F");
-  tree->Branch("BL", BL, "BL[nCh]/F");
-  tree->Branch("BL_RMS", BL_RMS, "BL_RMS[nCh]/F");
+  tree->Branch("PE_WOM1",&PE_WOM1, "PE_WOM1/F");
+  tree->Branch("PE_WOM2",&PE_WOM2, "PE_WOM2/F");
+  tree->Branch("BL_lower", BL_lower, "BL_lower[nCh]/F");
+  tree->Branch("BL_RMS_lower", BL_RMS_lower, "BL_RMS_lower[nCh]/F");
+  tree->Branch("BL_Chi2_lower", BL_Chi2_lower, "BL_Chi2_lower[nCh]/F");
+  tree->Branch("BL_upper", BL_upper, "BL_upper[nCh]/F");
+  tree->Branch("BL_RMS_upper", BL_RMS_upper, "BL_RMS_upper[nCh]/F");
+  tree->Branch("BL_Chi2_upper", BL_Chi2_upper, "BL_Chi2_upper[nCh]/F");
+  tree->Branch("peakX",peakX,"peakX[nCh][4]/D");
+  tree->Branch("peakY",peakY,"peakY[nCh][4]/D");
   tree->Branch("Integral_0_300", Integral_0_300, "Integral_0_300[nCh]/F");
   tree->Branch("Integral", Integral, "Integral[nCh]/F");
-  tree->Branch("Integral_Correction",&Integral_Correction, "Integral_Correction/F");
   tree->Branch("Integral_mVns", Integral_mVns, "Integral_mVns[nCh]/F");
   tree->Branch("EventIDsamIndex",EventIDsamIndex, "EventIDsamIndex[nCh]/I");
   tree->Branch("FirstCellToPlotsamIndex",FirstCellToPlotsamIndex, "FirstCellToPlotsamIndex[nCh]/I");
@@ -338,16 +363,17 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         nitem = fread (&floatR,1,4,pFILE); RawTriggerRate[i] = floatR;
         ChannelNr[i]=i;
 
-        /*The labeling of the WOMs in the box was done using the letters A,B,C,D. For convinience
-        these letters are here replaced by the numbers 1-4 which is stored in the root-tree for
-        every channel and every event.*/
+        /*
+        __ Set WOMID _________________________________________________________
+        The labeling of the WOMs in the box was done using the letters A,B,C,D. For convinience these letters are here replaced by the numbers 1-4 which is stored in the root-tree for every channel and every event.
+        */
         if (WCVersion == WCAlexander){
-          if (i <= 6){ WOMID[i] = 1; }
-          else if (i >= 7 && i <= 14){ WOMID[i] = 2; }
-        }
-        else {
           if (i <= 6){ WOMID[i] = 3; }
           else if (i >= 7 && i <= 14){ WOMID[i] = 4; }
+        }
+        else {
+          if (i <= 6){ WOMID[i] = 1; }
+          else if (i >= 7 && i <= 14){ WOMID[i] = 2; }
         }
 
         TString title("");
@@ -355,62 +381,193 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         hCh.Reset();
         hCh.SetTitle(title);
 
-        /*Writing the signal amplitude values into the root-histogram hCh.*/
-        for(int j = 0;j<1024;j++){
-          nitem = fread (&amplValues[i][j],sizeof(short),1,pFILE);
-          hCh.SetBinContent(j+1,(amplValues[i][j]*coef*1000));
+        /*
+        __ Waveform Histogram _______________________________________________
+        Writing the signal amplitude values into the root-histogram hCh.
+        */
+        if (i == 15){
+          for(int j = 0;j<1024;j++){
+            nitem = fread (&amplValues[i][j],sizeof(short),1,pFILE);
+            hCh.SetBinContent(j+1,-(amplValues[i][j]*coef*1000));
+          }
+        }
+        else {
+          for(int j = 0;j<1024;j++){
+            nitem = fread (&amplValues[i][j],sizeof(short),1,pFILE);
+            hCh.SetBinContent(j+1,(amplValues[i][j]*coef*1000));
+          }
+        }
+
+        /*The error of each value in each bin is set to 0.5 mV.*/
+        for(int j=1;j<=hCh.GetXaxis()->GetNbins();j++){
+          hCh.SetBinError(j,0.5);
         }
 
         /*Analysis if the event/signal starts.*/
         max[i] = hCh.GetMaximum();
         min[i] = hCh.GetMinimum();
-        amp[i] = hCh.GetMaximum();
-	  
-        getBL(&hCh, BL_output,0,30);
-        BL[i] = BL_output[0];
-        BL_RMS[i] = BL_output[1];
 
-        amp[i] = hCh.GetMaximum() - BL[i];
+
+        /*Saving the histogram of that event into a temporary histogram hChtemp. These histograms are available outside of the channel-loop. If analysis using the signals/events of multiple channels needs to be done, this can be accomplished by using hChtemp after the channel-loop.*/
+        hChtemp.at(i) = hCh;
 	  
-        /*The error of each value in each bin is here set to the root-mean-square of the
-        baseline.*/
-        for(int j = 1;j <= hCh.GetXaxis()->GetNbins();j++){
-          hCh.SetBinError(j,BL_RMS[i]);
+        /*
+        __ Baseline Fit _______________________________________________________
+        Calculate baseline values infront and after the triggered signal
+        Triggered signal is expected in the range fromm 100 to 150 ns
+        */
+        BL_fit(&hChtemp.at(i), BL_output, 0.0, 75.0);
+        BL_lower[i] = BL_output[0];
+        BL_RMS_lower[i] = BL_output[1];
+        BL_Chi2_lower[i] = BL_output[2];
+        BL_fit(&hChtemp.at(i), BL_output, 220.0, 320.0);
+        BL_upper[i] = BL_output[0];
+        BL_RMS_upper[i] = BL_output[1];
+        BL_Chi2_upper[i] = BL_output[2];
+	  
+        /*
+        __ Peakfinder _________________________________________________________
+        Implemented to search double-muon-event candiates
+        Set maximum number of peaks stored in beginning of script -> nPeaks
+        peakX/Yarray[nCh][nPeaks] stores peak coordinates as branches in tree
+        Switch on/off with pfON
+        -> when off:  set peakX/Yarray[nCh][nPeaks] to zero
+        */
+        gErrorIgnoreLevel = kError; // suppress root terminal output 
+
+        bool pfON = false;
+        if (i<15) {pfON = true;} // switch on/off peakfinder 
+        int sigma = 10; // sigma of searched peaks
+        Double_t thrPF = 0.1; // peakfinder threshold
+        TPolyMarker pm; // store polymarker showing peak position, print later
+        peakfinder(&hCh,0,130, nPeaks, sigma, thrPF, peakX[i], peakY[i], &pm, pfON);
+
+        gErrorIgnoreLevel = kUnset; // return to normal terminal output
+
+        // baseline-correct Y-values and convert to units of p.e.
+        if (pfON)
+        {
+          for (int j = 0; j < nPeaks; ++j)
+          {
+            peakY[i][j] = amp2pe(peakY[i][j], calib_amp_AB[i],BL_upper[i], BL_lower[i], BL_Chi2_upper[i], BL_Chi2_lower[i]);
+          }
         }
 
-        /*Saving the histogram of that event into a temporary histogram hChtemp.
-        These histograms are available outside of the channel-loop. If analysis using
-        the signals/events of multiple channels needs to be done, this can be accomplished
-        by using hChtemp after the channel-loop.*/
-        hChtemp.at(i) = hCh;
+        // printf("X: %d %f %f %f %f \n",i,peakX[i][0],peakX[i][1],peakX[i][2],peakX[i][3]);
+        // printf("Y: %d %f %f %f %f \n",i,peakY[i][0],peakY[i][1],peakY[i][2],peakY[i][3]);
 
-        /*Setting the signal time by using a constant fraction disriminator method.
-        The SiPM and the trigger sinals are handled differently using different thresholds.*/
+        /*
+        __ Max. Amplitude in Range __________________________________________
+        Record maximum amplitude in range before expected signal (100-130 ns)
+        */
+        amp_inRange[i] = max_inRange(&hCh,0,95);
+        // convert p.e. and BL-correct
+        amp_inRange[i] = amp2pe(amp_inRange[i], calib_amp_AB[i],BL_upper[i], BL_lower[i], BL_Chi2_upper[i], BL_Chi2_lower[i]);
+        
+        /*
+        __ CFD _____________________________________________________________
+        Setting the signal time by using a constant fraction disriminator method.
+        The SiPM and the trigger sinals are handled differently using different thresholds.
+        */
         if (i == 15){ //trigger
-          t[i] = CDF(&hCh,fTrigFit,0.5);
+          t[i] = CDF(&hCh,0.5);
         }
         else { //SiPMs
-          t[i] = CDF(&hCh,fTrigFit,0.1);
+          t[i] = CDF(&hCh,0.1);
+          if (t[i] < 75){
+            t[i] = CDFinvert(&hCh,0.3);
+          }
         }
 
-        /*The signals for events can be printed to a .pdf file called waves.pdf. The rate at
-        which the events are drawn to waves.pdf is set via the variable wavesPrintRate. Additional
-        requirements can be set in the if-statement to look at specific events only.*/
+        /*
+        __ Printing Wafevorms ____________________________________________
+        The signals for events can be printed to a .pdf file called waves.pdf. The rate at which the events are drawn to waves.pdf is set via the variable wavesPrintRate. Additional requirements can be set in the if-statement to look at specific events only.
+        The entire if-statement so far also plots lines at the found signal maximum, the corresponding integration limit, as well as the BL values to each of the histograms.
+        */
         if(EventNumber%wavesPrintRate==0){
           cWaves.cd(1+4*(i%4)+(i)/4);
           hCh.DrawCopy();
-          TLine* ln = new TLine(t[i],-2000,t[i],2000); //draw red vertical line at signal time
+          hCh.GetXaxis()->SetRange(100.0/SP,150.0/SP);
+          int max_bin = hCh.GetMaximumBin();
+          int lower_bin = max_bin - 20.0/SP;
+          int upper_bin = max_bin + 30.0/SP;
+          // double x = h->GetXaxis()->GetBinCenter(binmax);
+          float max_time = hCh.GetXaxis()->GetBinCenter(max_bin);
+          float lower_time = hCh.GetXaxis()->GetBinCenter(lower_bin);
+          float upper_time = hCh.GetXaxis()->GetBinCenter(upper_bin);
+          hCh.GetXaxis()->SetRange(0,1024);
+          TLine* ln = new TLine(max_time,-2000,max_time,2000);
+          TLine* ln2 = new TLine(lower_time,-2000,lower_time,2000);
+          TLine* ln3 = new TLine(upper_time,-2000,upper_time,2000);
+          TLine* ln4 = new TLine(0,BL_lower[i],75,BL_lower[i]);
+          TLine* ln5 = new TLine(220,BL_upper[i],320,BL_upper[i]);
+          TText *text = new TText(.5,.5,Form("%f %f",BL_lower[i],BL_upper[i]));
           ln->SetLineColor(2);
+          ln2->SetLineColor(3);
+          ln3->SetLineColor(3);
+          ln4->SetLineColor(2);
+          ln5->SetLineColor(2);
           ln->Draw("same");
+          ln2->Draw("same");
+          ln3->Draw("same");
+          ln4->Draw("same");
+          ln5->Draw("same");
+          text->Draw("same");
+          if (pfON){pm.Draw();} // print peakfinders polymarker
         }
 
-        /*There are several definitions of the integral of a signal used here. Those are:
-        - Integral_0_300: Integration over the entire time window (~320ns)
-        - Integral: Integration over a smaller time window (~50ns) relative to the trigger*/
-        Integral_0_300[i] = (hCh.Integral(1, 1024, "width")-BL[i]*1024*SP);
+        /*
+        __Print Raw Data to .txt ______________________________________________
+        Select channel. Prints histogram raw data in a two column text file
+        */
 
+        // if (i==4 && BL_chi2[4]<1.7 && BL_chi2[4]>0.7)
+        // if (i==4)
+        // {
+        //   TString histDataName;
+        //   histDataName.Form("Ch%d_hist_data.txt",i);
+        //   TString path2hist_data;
+        //   path2hist_data.Form("%s/%s",(const char*)plotSaveFolder,(const char*)histDataName);
+        //   FILE * histOut;
+        //   histOut = fopen(path2hist_data,"a"); // produces overhead, maybe put this infront of loop
+          
+        //   Int_t nbins_x = hCh.GetNbinsX(); // bins at k==0 and k==nbins_x seem to have BinContent==0
+        //   for (Int_t k=1; k<=nbins_x; k++)
+        //   {
+        //     fprintf(histOut,"%.4f %.8f\n",
+        //     hCh.GetBinLowEdge(k)+hCh.GetBinWidth(k)/2,
+        //     hCh.GetBinContent(k));
+        //   }
+        //   fclose(histOut);
+        // }
+
+        /*
+        __ Integral & Amplitude ________________________________________
+        There are several definitions of the integral of a signal used here. Those are:
+        - Integral_0_300: Integration over the entire time window (~320ns)
+        - Integral: Integration over a smaller time window (~50ns) relative to the trigger
+        Additionally the number of p.e. is now calculated using the amplitude
+        and the calibration factors in the calib_amp-vactor. The function 'PE' calculates the amplitude of the signal, subtracts the better BL value and divides by the calibration factor.
+        */
+        Integral_0_300[i] = (hCh.Integral(1, 1024, "width")-0.0*1024*SP);
+        if (BL_Chi2_upper[i] <= BL_Chi2_lower[i]){
+        	Integral[i] = Integrate_50ns(&hCh, BL_upper[i]);
+        	amp[i] = PE(&hCh,calib_amp_AB.at(i),BL_upper[i], 100.0, 150.0);
+        }
+        else{
+        	Integral[i] = Integrate_50ns(&hCh, BL_lower[i]);
+         	amp[i] = PE(&hCh,calib_amp_AB.at(i),BL_lower[i], 100.0, 150.0);
+        }
+
+      // End of loop over inividual channels
       }
 
+      /*
+      __ Number of P.E. _____________________________________________________
+      Calculate & save the number of p.e. for an entire WOM. Note: for the 1st WOM of each WC one channel was not recorded. Thus, there are only 7 values from 8. The result for the WOM is therefore scaled up by 8/7 to make the numbers comparable.
+      */
+      PE_WOM1 = 8/7*(amp[0]+amp[1]+amp[2]+amp[3]+amp[4]+amp[5]+amp[6]);
+      PE_WOM2 = (amp[7]+amp[8]+amp[9]+amp[10]+amp[11]+amp[12]+amp[13]+amp[14]);
       trigT = t[15];
       for (int i=0; i<=14; i++){
         tSiPM[i] = t[i] - trigT;
@@ -453,7 +610,7 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
       else isGoodSignal_5=0;
       */
       /*Saving the plotted signals/events to a new page in the .pdf file.*/
-      if(EventNumber%wavesPrintRate==0){
+      if(EventNumber%wavesPrintRate==0) {
         if(wavePrintStatus<0){
           cWaves.Print((TString)(plotSaveFolder+"/waves.pdf("),"pdf");
           wavePrintStatus=0;
@@ -478,6 +635,7 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
       /*Writing the data for that event to the tree.*/
       tree->Fill();
     }
+    fclose(pFILE);
   }
 
   /*Clearing objects and saving files.*/

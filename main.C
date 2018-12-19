@@ -49,7 +49,7 @@ int main(int argc, char *argv[]){
     inDataFolder = argv[2];
     outFile = argv[3];
     runNr=atoi(argv[4]);
-    WCVersion = checkFilename(outFile);
+    WCVersion = "AB";
     cout << WCVersion << endl;
 
     cout<<"In data file list : "<<inFileList<<endl
