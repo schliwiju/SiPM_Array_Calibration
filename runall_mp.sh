@@ -26,7 +26,8 @@ if [[ $case_selector != 1 ]]
 then
 	runlist=$2 
 	echo "used runlist: $runlist"; echo "";
-fi 
+fi
+echo ""
 
 #################
 ### DEBUGGING ###
@@ -60,14 +61,14 @@ case $case_selector in
 
 		work_data()
 		{
+			runName=$0
+			echo "$runName" # dummy functionality for debugging
+
 			here=`pwd`
 
 			if [ ! -d "$here/runs" ]; then
   				mkdir $here/runs
 			fi
-
-			runName=$0
-			# echo $runName # dummy functionality for debugging
 
 			mkdir $here/runs/$runName
 			if [ ! -e $here/runs/$runName/$runName.list ]; then
