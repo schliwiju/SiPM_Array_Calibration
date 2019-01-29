@@ -43,8 +43,13 @@ float pe = 47.46;//mV*ns
 //vector<float> pe_SiPM = {32.14, 39.33, 34.20, 30.79, 34.09, 29.99, 30.69, 29.95}; //a,b,c,d,e,f,g,h  -  Gain-Baseline from fit
 vector<float> pe_SiPM = {42.01, 34.67, 34.28, 33.84, 37.55, 34.68, 33.81, 38.84}; //sorted by Wavecatcher-Channel
 vector<float> SiPM_shift = {2.679, 2.532, 3.594, 3.855, 3.354, 3.886, 3.865, 4.754};
-vector<float> calib_amp_AB = {10.072,9.24254,8.88147,9.57771,9.58071,9.14965,9.53239,6.74035,9.62728,9.62879,10.0288,10.3354,9.75948,9.53048,9.68774,1};
-int wavesPrintRate = 1000;
+// vector<float> calib_amp_AB = {10.0024,9.24254,9.08902,10.0149,9.95047,9.55901,10.1483,10.4179,10.0141,9.92513,10.4975,10.422,10.1208,10.1884,10.1682,1};
+vector<float> calib_amp_AB = {6.748,6.16313,6.07082,6.68036,6.65783,6.37541,6.7711,6.85418,6.68469,6.58283,6.98329,6.97906,6.76493,6.75924,6.78279,1};
+vector<float> calib_amp_AB_max = {9.91652,8.86927,8.88147,9.57771,9.58071,9.14965,9.53239,10.1344,9.62728,9.62879,10.0288,10.3354,9.75948,9.53048,9.68774,1};
+
+int wavesPrintRate = 500;
+int sumWOMAPrintRate = 1000000;
+int sumWOMBPrintRate = 500;
 int ch0PrintRate = 1000000;
 int trigPrintRate = 1000000;//100
 int signalPrintRate = 100000;//100
@@ -117,6 +122,10 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   Float_t t2t3 = -999;//t2t3 = [(t2-t3)]
   Int_t isVeto = -999; //variable to define veto, 1 if veto, 0 if not, -999 if undefined
   Int_t isTrig = -999;
+  Float_t tsumWOMA_invCFD = -999;
+  Float_t tsumWOMB_invCFD = -999;
+  Float_t tsumWOMA_invCFD_wrtTrig = -999;
+  Float_t tsumWOMB_invCFD_wrtTrig = -999;
   Int_t isLastEvt = -999;
   Int_t isGoodSignal_5 = -999;
   Float_t trigGate = -999;
@@ -126,7 +135,9 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   Int_t WOMID[16];  //1=A, 2=B, 3=C, 4=D
   float PE_WOM1, PE_WOM2;
   std::vector<float> amp(16,-999);
+  std::vector<float> amp_max(16,-999);
   std::vector<float> amp_inRange(16,-999);
+  std::vector<float> amp_BL(16,-999);
   std::vector<float> max(16,-999);
   std::vector<float> min(16,-999);
   Float_t t[16];
@@ -135,10 +146,17 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   Float_t BL_lower[16];//store baseline for 16 channels for 0-75ns range
   Float_t BL_RMS_lower[16];//store rms of baseline for 16 channels for 0-75ns range
   Float_t BL_Chi2_lower[16];//store chi2/dof of baseline-fit for 16 channels for 0-75ns range
+  Float_t BL_pValue_lower[16];
   Float_t BL_upper[16];//store baseline for 16 channels for 220-320ns range
   Float_t BL_RMS_upper[16];//store rms of baseline for 16 channels for 220-320ns range
   Float_t BL_Chi2_upper[16];//store chi2/dof of baseline-fit for 16 channels for 220-320ns range
-  float BL_output[3];//array used for output getBL-function
+  Float_t BL_pValue_upper[16];
+
+  Float_t BL_used[16];
+  Float_t BL_Chi2_used[16];
+  Float_t BL_pValue_used[16];
+
+  float BL_output[4];//array used for output getBL-function
   float Integral_0_300[16];//array used to store Integral of signal from 0 to 300ns
 
   int nPeaks = 4; // maximum number of peaks to be stored by peakfinder; has to be set also when creating branch
@@ -188,6 +206,10 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   plotSaveFolder.ReplaceAll("out.root","");
   TCanvas cWaves("cWaves","cWaves",1000,700);
   cWaves.Divide(4,4);
+  TCanvas csumWOMA("csumWOMA","csumWOMA",1000,700);
+  csumWOMA.Divide(4,2);
+  TCanvas csumWOMB("csumWOMB","csumWOMB",1000,700);
+  csumWOMB.Divide(3,3);
   TCanvas cCh0("cCh0","cCh0",1500,900);
   cCh0.Divide(2,2);
   TCanvas cTrig("cTrig","cTrig",1500,900);
@@ -232,12 +254,18 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   tree->Branch("t2t3",&t2t3, "t2t3/F");
   tree->Branch("isVeto",&isVeto,"isVeto/I");
   tree->Branch("isTrig",&isTrig,"isTrig/I");
+  tree->Branch("tsumWOMA_invCFD",&tsumWOMA_invCFD,"tsumWOMA_invCFD/F");
+  tree->Branch("tsumWOMB_invCFD",&tsumWOMB_invCFD,"tsumWOMB_invCFD/F");
+  tree->Branch("tsumWOMA_invCFD_wrtTrig",&tsumWOMA_invCFD_wrtTrig,"tsumWOMA_invCFD_wrtTrig/F");
+  tree->Branch("tsumWOMB_invCFD_wrtTrig",&tsumWOMB_invCFD_wrtTrig,"tsumWOMB_invCFD_wrtTrig/F");  
   tree->Branch("isGoodSignal_5",&isGoodSignal_5,"isGoodSignal_5/I");
   tree->Branch("nCh",&nCh, "nCh/I");
   tree->Branch("WOMID",WOMID,"WOMID[nCh]/I");
   tree->Branch("ch",ChannelNr, "ch[nCh]/I");
   tree->Branch("amp",amp.data(), "amp[nCh]/F");
+  tree->Branch("amp_max",amp_max.data(), "amp_max[nCh]/F");
   tree->Branch("amp_inRange",amp_inRange.data(), "amp_inRange[nCh]/F");
+  tree->Branch("amp_BL",amp_BL.data(), "amp_BL[nCh]/F");
   tree->Branch("max",max.data(), "max[nCh]/F");
   tree->Branch("min",min.data(), "min[nCh]/F");
   tree->Branch("t",t, "t[nCh]/F");
@@ -247,9 +275,14 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   tree->Branch("BL_lower", BL_lower, "BL_lower[nCh]/F");
   tree->Branch("BL_RMS_lower", BL_RMS_lower, "BL_RMS_lower[nCh]/F");
   tree->Branch("BL_Chi2_lower", BL_Chi2_lower, "BL_Chi2_lower[nCh]/F");
+  tree->Branch("BL_pValue_lower", BL_pValue_lower, "BL_pValue_lower[nCh]/F");
   tree->Branch("BL_upper", BL_upper, "BL_upper[nCh]/F");
   tree->Branch("BL_RMS_upper", BL_RMS_upper, "BL_RMS_upper[nCh]/F");
   tree->Branch("BL_Chi2_upper", BL_Chi2_upper, "BL_Chi2_upper[nCh]/F");
+  tree->Branch("BL_pValue_upper", BL_pValue_upper, "BL_pValue_upper[nCh]/F");
+  tree->Branch("BL_used", BL_used, "BL_used[nCh]/F");
+  tree->Branch("BL_Chi2_used", BL_Chi2_used, "BL_Chi2_used[nCh]/F");
+  tree->Branch("BL_pValue_used", BL_pValue_used, "BL_pValue_used[nCh]/F");
   tree->Branch("peakX",peakX,"peakX[nCh][4]/D");
   tree->Branch("peakY",peakY,"peakY[nCh][4]/D");
   tree->Branch("Integral_0_300", Integral_0_300, "Integral_0_300[nCh]/F");
@@ -266,6 +299,8 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   assert(inList.is_open());
 
   int wavePrintStatus=-1;
+  int sumWOMAPrintStatus=-1;
+  int sumWOMBPrintStatus=-1;
   int ch0PrintStatus=-1;
   int trigPrintStatus=-1;
   int signalPrintStatus=-1;
@@ -420,11 +455,13 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         BL_lower[i] = BL_output[0];
         BL_RMS_lower[i] = BL_output[1];
         BL_Chi2_lower[i] = BL_output[2];
+        BL_pValue_lower[i] = BL_output[3];
         BL_fit(&hChtemp.at(i), BL_output, 220.0, 320.0);
         BL_upper[i] = BL_output[0];
         BL_RMS_upper[i] = BL_output[1];
         BL_Chi2_upper[i] = BL_output[2];
-	  
+        BL_pValue_upper[i] = BL_output[3];
+
         /*
         __ Peakfinder _________________________________________________________
         Implemented to search double-muon-event candiates
@@ -436,7 +473,7 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         gErrorIgnoreLevel = kError; // suppress root terminal output 
 
         bool pfON = false;
-        if (i<15) {pfON = true;} // switch on/off peakfinder 
+        if (i<15) {pfON = false;} // switch on/off peakfinder 
         int sigma = 10; // sigma of searched peaks
         Double_t thrPF = 0.1; // peakfinder threshold
         TPolyMarker pm; // store polymarker showing peak position, print later
@@ -460,7 +497,7 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         __ Max. Amplitude in Range __________________________________________
         Record maximum amplitude in range before expected signal (100-130 ns)
         */
-        amp_inRange[i] = max_inRange(&hCh,0,95);
+        amp_inRange[i] = max_inRange(&hCh,0,50);
         // convert p.e. and BL-correct
         amp_inRange[i] = amp2pe(amp_inRange[i], calib_amp_AB[i],BL_upper[i], BL_lower[i], BL_Chi2_upper[i], BL_Chi2_lower[i]);
         
@@ -473,48 +510,13 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
           t[i] = CDF(&hCh,0.5);
         }
         else { //SiPMs
-          t[i] = CDF(&hCh,0.1);
-          if (t[i] < 75){
-            t[i] = CDFinvert(&hCh,0.3);
+          t[i] = CFD2(&hCh,0.35);
+          if (t[i] < 95){
+            t[i] = CFDinvert2(&hCh,0.35);
           }
         }
 
-        /*
-        __ Printing Wafevorms ____________________________________________
-        The signals for events can be printed to a .pdf file called waves.pdf. The rate at which the events are drawn to waves.pdf is set via the variable wavesPrintRate. Additional requirements can be set in the if-statement to look at specific events only.
-        The entire if-statement so far also plots lines at the found signal maximum, the corresponding integration limit, as well as the BL values to each of the histograms.
-        */
-        if(EventNumber%wavesPrintRate==0){
-          cWaves.cd(1+4*(i%4)+(i)/4);
-          hCh.DrawCopy();
-          hCh.GetXaxis()->SetRange(100.0/SP,150.0/SP);
-          int max_bin = hCh.GetMaximumBin();
-          int lower_bin = max_bin - 20.0/SP;
-          int upper_bin = max_bin + 30.0/SP;
-          // double x = h->GetXaxis()->GetBinCenter(binmax);
-          float max_time = hCh.GetXaxis()->GetBinCenter(max_bin);
-          float lower_time = hCh.GetXaxis()->GetBinCenter(lower_bin);
-          float upper_time = hCh.GetXaxis()->GetBinCenter(upper_bin);
-          hCh.GetXaxis()->SetRange(0,1024);
-          TLine* ln = new TLine(max_time,-2000,max_time,2000);
-          TLine* ln2 = new TLine(lower_time,-2000,lower_time,2000);
-          TLine* ln3 = new TLine(upper_time,-2000,upper_time,2000);
-          TLine* ln4 = new TLine(0,BL_lower[i],75,BL_lower[i]);
-          TLine* ln5 = new TLine(220,BL_upper[i],320,BL_upper[i]);
-          TText *text = new TText(.5,.5,Form("%f %f",BL_lower[i],BL_upper[i]));
-          ln->SetLineColor(2);
-          ln2->SetLineColor(3);
-          ln3->SetLineColor(3);
-          ln4->SetLineColor(2);
-          ln5->SetLineColor(2);
-          ln->Draw("same");
-          ln2->Draw("same");
-          ln3->Draw("same");
-          ln4->Draw("same");
-          ln5->Draw("same");
-          text->Draw("same");
-          if (pfON){pm.Draw();} // print peakfinders polymarker
-        }
+
 
         /*
         __Print Raw Data to .txt ______________________________________________
@@ -540,6 +542,14 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         //   }
         //   fclose(histOut);
         // }
+      if(EventNumber%sumWOMAPrintRate==0&&i<7){
+          csumWOMA.cd(i+1);
+          hCh.DrawCopy();
+      }
+      if(EventNumber%sumWOMBPrintRate==0&&i>6){
+         csumWOMB.cd(i-6);
+         hCh.DrawCopy();
+      }
 
         /*
         __ Integral & Amplitude ________________________________________
@@ -553,13 +563,72 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         if (BL_Chi2_upper[i] <= BL_Chi2_lower[i]){
         	Integral[i] = Integrate_50ns(&hCh, BL_upper[i]);
         	amp[i] = PE(&hCh,calib_amp_AB.at(i),BL_upper[i], 100.0, 150.0);
+          // amp[i] = PE(&hCh,calib_amp_AB.at(i),BL_upper[i], t[i]-20, t[i]+30);
+          BL_used[i] = BL_upper[i];
+          BL_Chi2_used[i] = BL_Chi2_upper[i];
+          BL_pValue_used[i] = BL_pValue_upper[i];
+          hCh.GetXaxis()->SetRange((t[i]-20)/SP,(t[i]+30)/SP);
+          int max_bin = hCh.GetMaximumBin();
+          amp_max[i] = (hCh.GetBinContent(max_bin)-BL_upper[i])/calib_amp_AB_max.at(i);
+          hCh.GetXaxis()->SetRange(0,1024);
         }
         else{
         	Integral[i] = Integrate_50ns(&hCh, BL_lower[i]);
          	amp[i] = PE(&hCh,calib_amp_AB.at(i),BL_lower[i], 100.0, 150.0);
+          // amp[i] = PE(&hCh,calib_amp_AB.at(i),BL_lower[i], t[i]-20, t[i]+30);
+          BL_used[i] = BL_lower[i];
+          BL_Chi2_used[i] = BL_Chi2_lower[i];
+          BL_pValue_used[i] = BL_pValue_lower[i];
+          hCh.GetXaxis()->SetRange((t[i]-20)/SP,(t[i]+30)/SP);
+          int max_bin = hCh.GetMaximumBin();
+          amp_max[i] = (hCh.GetBinContent(max_bin)-BL_lower[i])/calib_amp_AB_max.at(i);
+          hCh.GetXaxis()->SetRange(0,1024);
         }
 
+        hCh.GetXaxis()->SetRange(0./SP,75./SP);
+        int max_bin = hCh.GetMaximumBin();
+        amp_BL[i] = hCh.GetBinContent(max_bin);
+        hCh.GetXaxis()->SetRange(0,1024);
       // End of loop over inividual channels
+
+        /*
+        __ Printing Wafevorms ____________________________________________
+        The signals for events can be printed to a .pdf file called waves.pdf. The rate at which the events are drawn to waves.pdf is set via the variable wavesPrintRate. Additional requirements can be set in the if-statement to look at specific events only.
+        The entire if-statement so far also plots lines at the found signal maximum, the corresponding integration limit, as well as the BL values to each of the histograms.
+        */
+        if(EventNumber%wavesPrintRate==0){
+          cWaves.cd(1+4*(i%4)+(i)/4);
+          hCh.DrawCopy();
+          hCh.GetXaxis()->SetRange((t[i]-20)/SP,(t[i]+30)/SP);
+          int max_bin = hCh.GetMaximumBin();
+          int lower_bin = max_bin - 20.0/SP;
+          int upper_bin = max_bin + 30.0/SP;
+          // double x = h->GetXaxis()->GetBinCenter(binmax);
+          float max_time = hCh.GetXaxis()->GetBinCenter(max_bin);
+          float lower_time = hCh.GetXaxis()->GetBinCenter(lower_bin);
+          float upper_time = hCh.GetXaxis()->GetBinCenter(upper_bin);
+          hCh.GetXaxis()->SetRange(0,1024);
+          TLine* ln = new TLine(max_time,-2000,max_time,2000);
+          TLine* ln2 = new TLine(lower_time,-2000,lower_time,2000);
+          TLine* ln3 = new TLine(upper_time,-2000,upper_time,2000);
+          TLine* ln4 = new TLine(0,BL_lower[i],75,BL_lower[i]);
+          TLine* ln5 = new TLine(220,BL_upper[i],320,BL_upper[i]);
+          TText *text = new TText(.5,.5,Form("%f %f",BL_lower[i],BL_upper[i]));
+          TText *text2 = new TText(max_time+3,amp[i]+1,Form("%f %f %f",amp[i], amp_max[i], BL_used[i]));
+          ln->SetLineColor(2);
+          ln2->SetLineColor(3);
+          ln3->SetLineColor(3);
+          ln4->SetLineColor(2);
+          ln5->SetLineColor(2);
+          ln->Draw("same");
+          ln2->Draw("same");
+          ln3->Draw("same");
+          ln4->Draw("same");
+          ln5->Draw("same");
+          text->Draw("same");
+          text2->Draw("same");
+          if (pfON){pm.Draw();} // print peakfinders polymarker
+        }
       }
 
       /*
@@ -578,6 +647,47 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         }
         */
       }
+
+      /* Filling Sum Histograms for WOM A and B and determine time Resolution */
+      /*
+      TH1F hSumA("hSumA","Sum A;ns;Amplitude, mV",1024,-0.5*SP,1023.5*SP);
+      for(int hSumIndexA=0;hSumIndexA<7;hSumIndexA++){
+        hSumA.Add(&hChtemp.at(hSumIndexA),1);
+      }
+      csumWOMA.cd(8);
+      hSumA.DrawCopy();
+
+      tsumWOMA_invCFD = CFDinvert2(&hSumA,0.4);
+      tsumWOMA_invCFD_wrtTrig = trigT-tsumWOMA_invCFD;
+*/
+      TH1F hSumB("hSumB","Sum B;ns;Amplitude, mV",1024,-0.5*SP,1023.5*SP);
+      for(int hSumIndexB=7;hSumIndexB<15;hSumIndexB++){
+        TF1* f_const = new TF1("f_const","pol0",0,320);
+        f_const->SetParameter(0,BL_used[hSumIndexB]);
+
+        hChtemp.at(hSumIndexB).Add(f_const, -1);
+        hChtemp.at(hSumIndexB).Scale(1.0/calib_amp_AB.at(hSumIndexB));
+
+        hSumB.Add(&hChtemp.at(hSumIndexB),1);
+      }
+
+      PE_WOM2 = PE(&hSumB,1,0, 100.0, 150.0);
+      csumWOMB.cd(9);
+      hSumB.DrawCopy();
+
+      tsumWOMB_invCFD = CFDinvert2(&hSumB,0.4);
+      tsumWOMB_invCFD_wrtTrig = trigT-tsumWOMB_invCFD;
+/*
+      */
+      /* end */
+
+      /*temporary for cfdScan_
+      if (PE_WOM2 >= 5){    //Switch PE_WOM of you want WOM 1 or 2
+        for(int i=0;i<N_CFD_points;i++){
+          v_hTimeRes.at(i)->Fill(trigT-CFD2(&hSumB,0.01*i)); // Switch hSumA or B or CFD2 or CFDinvert2
+        }
+      }
+      *///temporary end
       
       /*
       trigGate = abs(*(std::max_element(t,t+4))-*(std::min_element(t,t+4)));  
@@ -609,13 +719,28 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
       if(isTrig==1&&max[5]<1240)isGoodSignal_5=1;
       else isGoodSignal_5=0;
       */
+
       /*Saving the plotted signals/events to a new page in the .pdf file.*/
-      if(EventNumber%wavesPrintRate==0) {
+      if(EventNumber%wavesPrintRate==0 && (PE_WOM2)<10) {
         if(wavePrintStatus<0){
           cWaves.Print((TString)(plotSaveFolder+"/waves.pdf("),"pdf");
           wavePrintStatus=0;
         }
         else cWaves.Print((TString)(plotSaveFolder+"/waves.pdf"),"pdf");
+      }
+      if(EventNumber%sumWOMAPrintRate==0){
+        if(sumWOMAPrintStatus<0){
+          csumWOMA.Print((TString)(plotSaveFolder+"/sumWOMA.pdf("),"pdf");
+          sumWOMAPrintStatus=0;
+        }
+        else csumWOMA.Print((TString)(plotSaveFolder+"/sumWOMA.pdf"),"pdf");
+      }
+      if(EventNumber%sumWOMBPrintRate==0 && (PE_WOM2)<10){
+        if(sumWOMBPrintStatus<0){
+           csumWOMB.Print((TString)(plotSaveFolder+"/sumWOMB.pdf("),"pdf");
+           sumWOMBPrintStatus=0;
+        }
+        else csumWOMB.Print((TString)(plotSaveFolder+"/sumWOMB.pdf"),"pdf");
       }
       if(EventNumber%trigPrintRate==0){
         if(trigPrintStatus<0){
@@ -642,9 +767,37 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   inList.close();
   cWaves.Clear();
   cWaves.Print((TString)(plotSaveFolder+"/waves.pdf)"),"pdf");
+  csumWOMA.Clear();
+  csumWOMA.Print((TString)(plotSaveFolder+"/sumWOMA.pdf)"),"pdf");
+  csumWOMB.Clear();
+  csumWOMB.Print((TString)(plotSaveFolder+"/sumWOMB.pdf)"),"pdf");
   cCh0.Print((TString)(plotSaveFolder+"/ch0.pdf)"),"pdf");
   cTrig.Print((TString)(plotSaveFolder+"/trig.pdf)"),"pdf");
   cSignal.Print((TString)(plotSaveFolder+"/signal.pdf)"),"pdf");
+
+  /* temporary for cfdScan
+  TH1F* sigma_timeRes_Fit = new TH1F("sigma_timeRes_Fit",";CFD threshold;Timeresolution, ns",N_CFD_points,0,0.01*N_CFD_points);
+  TF1* fGaus = new TF1("fGaus","gaus",45,60);
+  fGaus->SetLineWidth(1);
+  TCanvas c_TimeRes("c_TimeRes");
+  for(int i=0;i<N_CFD_points;i++){
+    c_TimeRes.cd();
+    v_hTimeRes.at(i)->Draw();
+    v_hTimeRes.at(i)->Fit("fGaus","R");
+    sigma_timeRes_Fit->SetBinContent(i+1,fGaus->GetParameter(2));
+    sigma_timeRes_Fit->SetBinError(i+1,fGaus->GetParError(2));
+    TString name("");
+    name.Form("hTimeRes%d.png",i);
+    c_TimeRes.Print((TString)(plotSaveFolder+"/"+name));
+  }
+  c_TimeRes.cd();
+  sigma_timeRes_Fit->SetMarkerSize(1);
+  sigma_timeRes_Fit->SetMarkerStyle(20);
+  sigma_timeRes_Fit->SetLineColor(kRed);
+  //c_TimeRes.Print((TString)("/home/maximilian/Dokumente/Arbeit/CERNTestBeam2018/Auswertung/CERN-TestBeam-2018/cfd-scan/"+name));
+  c_TimeRes.Write();
+  */// temporary end
+
   rootFile = tree->GetCurrentFile();
   rootFile->Write();
   rootFile->Close();

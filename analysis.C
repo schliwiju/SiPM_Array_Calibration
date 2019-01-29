@@ -51,6 +51,27 @@ float CDF(TH1F* hWave,float thr){
   return  x1+k*(thr*peak-y1);
 }
 
+float CFD2(TH1F* hWave,float thr){
+  hWave->GetXaxis()->SetRange(100./SP,150./SP);
+  float peak=hWave->GetMaximum();
+  int max_bin = hWave->GetMaximumBin();
+  int lower_bin = max_bin - 20./SP;
+  int timePos=lower_bin;
+  float val = 0;
+  hWave->GetXaxis()->SetRange(0,1024);
+  while(abs(val)<thr*peak){
+    timePos+=1;
+    val = hWave->GetBinContent(timePos);
+  }
+
+  double x1 = SP*(timePos-1);
+  double x2 = SP*(timePos);
+  double y1 = hWave->GetBinContent(timePos-1);
+  double y2 = hWave->GetBinContent(timePos);
+  double k = (x2-x1)/(y2-y1);
+  return  x1+k*(thr*peak-y1);
+}
+
 float CDFinvert(TH1F* hWave,float thr){
   float peak=hWave->GetMaximum();
   int timePos=hWave->GetMaximumBin();
@@ -66,6 +87,27 @@ float CDFinvert(TH1F* hWave,float thr){
   double y2 = hWave->GetBinContent(timePos+1);
   double k = (x2-x1)/(y2-y1);
   return  x1+k*(thr*peak-y1);  
+}
+
+float CFDinvert2(TH1F* hWave,float thr){
+  hWave->GetXaxis()->SetRange(100./SP,150./SP);
+  float peak=hWave->GetMaximum();
+  int max_bin = hWave->GetMaximumBin();
+  int lower_bin = max_bin - 20./SP;
+  int timePos=hWave->GetMaximumBin();
+  float val = peak;
+  hWave->GetXaxis()->SetRange(0,1024);
+  while(val>thr*peak && timePos>lower_bin){
+    val = hWave->GetBinContent(timePos);
+    timePos-=1;
+  }
+
+  double x1 = SP*(timePos);
+  double x2 = SP*(timePos+1);
+  double y1 = hWave->GetBinContent(timePos);
+  double y2 = hWave->GetBinContent(timePos+1);
+  double k = (x2-x1)/(y2-y1);
+  return  x1+k*(thr*peak-y1);
 }
 
 float Integrate_50ns(TH1F* hWave, float BL){
@@ -145,6 +187,7 @@ float* BL_fit(TH1F* hWave, float* BL_chi2, float t1, float t2){
   BL_chi2[0] = f_const->GetParameter(0);
   BL_chi2[1] = f_const->GetParError(0);
   BL_chi2[2] = f_const->GetChisquare()/f_const->GetNDF();
+  BL_chi2[3] = f_const->GetProb();
 
   return BL_chi2;
 }
