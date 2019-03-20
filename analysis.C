@@ -240,12 +240,18 @@ float max_inRange(TH1F* hWave,float t1, float t2){
 __ Convert mV to npe _______________________________________________
 Value is basline-corrected and converted to units of p.e. 
 */
-double amp2pe(double y, float calib_factor, float BL_upper, float BL_lower, float BL_Chi2_upper, float BL_Chi2_lower)
+double amp2pe_u_l(double y, float calib_factor, float BL_upper, float BL_lower, float BL_Chi2_upper, float BL_Chi2_lower)
 {
   if (BL_Chi2_upper <= BL_Chi2_lower)
       {y = (y-BL_upper) / calib_factor;}
   else{y = (y-BL_lower) / calib_factor;}
 
+  return y;
+}
+
+double amp2pe(double y, float calib_factor, float BL_used)
+{
+  y = (y-BL_used) / calib_factor;
   return y;
 }
 

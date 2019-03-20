@@ -47,9 +47,86 @@ vector<float> SiPM_shift = {2.679, 2.532, 3.594, 3.855, 3.354, 3.886, 3.865, 4.7
 vector<float> calib_amp_AB = {6.748,6.16313,6.07082,6.68036,6.65783,6.37541,6.7711,6.85418,6.68469,6.58283,6.98329,6.97906,6.76493,6.75924,6.78279,1};
 vector<float> calib_amp_AB_max = {9.91652,8.86927,8.88147,9.57771,9.58071,9.14965,9.53239,10.1344,9.62728,9.62879,10.0288,10.3354,9.75948,9.53048,9.68774,1};
 
-int wavesPrintRate = 500;
+/*
+__ CALIBRATION FACTORS of indiv. arrays _______________________________
+*/
+vector<float> calib_amp_8SiPM_17 = {1,3.90,3.35,3.25,3.25,3.60,3.25,3.25,3.55};
+vector<float> calib_amp_8SiPM_1 = {1,6.748,6.16313,6.14954,6.07082,6.68036,6.65783,6.37541,6.7711};
+vector<float> calib_amp_8SiPM_1_v2 = {1,6.522099,5.992113,5.895799,5.845471,6.190067,6.401603,6.188478,6.546069};
+
+vector<float> calib_amp_8SiPM_2 = {1,6.85418,6.68469,6.58283,6.98329,6.97906,6.76493,6.75924,6.78279};
+vector<float> calib_amp_8SiPM_2_v2 = {1,6.813743,6.468777,6.242779,6.607681,6.813801,6.603786,6.476896,6.634614};
+
+vector<float> calib_amp_40SiPM_1_sw1 = {1,5.051830,4.945279,4.925690,4.749162,4.949097,4.723241,4.707982,4.868597};
+vector<float> calib_amp_40SiPM_1_sw2 = {1,4.819562,4.740458,4.655669,4.563672,4.697865,4.539159,4.613854,4.748918};
+vector<float> calib_amp_40SiPM_1_sw4 = {1,4.682508,4.566132,4.469709,4.511808,4.556756,4.569269,4.513887,4.730196};
+
+vector<float> calib_amp_40SiPM_2_sw1 = {1,4.504408,4.321436,4.349675,4.474370,4.773048,4.893937,4.735639,4.620717};
+vector<float> calib_amp_40SiPM_2_sw2 = {1,4.427750,4.289465,4.360091,4.501094,4.655731,4.804050,4.808499,4.657945};
+vector<float> calib_amp_40SiPM_2_sw4 = {1,4.396243,4.217127, 4.344094,4.416440,4.678121,4.678319,4.633572,4.705655};
+
+// new procedure:
+// 20 ns amplitude acceptance window
+// constant baseline
+// continuous gain fit
+vector<float> g_8SiPM_1_constBL = {1,6.643101,5.937994,5.910624,5.840343,6.142987,6.347942,6.203394,6.606222};
+vector<float> g_8SiPM_2_constBL = {1,6.838216,6.477332,6.248899,6.621680,6.813820,6.551395,6.484221,6.685122};
+vector<float> g_8SiPM_17_constBL = {1,3.496053,3.189863,3.542560,3.110981,3.210311,3.576601,3.231899,3.257059};
+
+vector<float> g_8SiPM_17_constBL_HV58 = {1,2.472151,2.216387,2.595906,2.191874,2.224226,2.598138,2.246901,2.250155};
+vector<float> g_8SiPM_17_constBL_HV59 = {1,2.902316,2.627994,3.016038,2.613367,2.629431,3.043153,2.671950,2.697508};
+vector<float> g_8SiPM_17_constBL_HV59_alt = {1,2.888785,2.615228,2.966872,2.555194,2.590216,3.037215,2.637975,2.638252};
+vector<float> g_8SiPM_17_dynBL_HV59 = {1,2.937356,2.624025,3.017423,2.613488,2.639697,3.069505,2.650986,2.712761};
+vector<float> g_8SiPM_17_constBL_Charge_HV59 = {1,31.8030,28.2290,33.2173,27.3521,27.1600,31.3153,27.4802,27.7432};
+vector<float> g_8SiPM_17_constBL_HV60 = {1,3.477412,3.172458,3.543589,3.105156,3.209005,3.558541,3.210445,3.255698};
+vector<float> g_8SiPM_17_constBL_HV61 = {1,3.828382,3.523702,3.865647,3.438725,3.538159,3.862610,3.525762,3.600609};
+
+vector<float> g_40SiPM_1_sw4_constBL = {1,4.761221,4.719708,4.592255,4.580244,4.561942,4.508876,4.519476,4.744483};
+vector<float> g_40SiPM_1_sw2_Int590_constBL = {1,4.800180,4.712084,4.578888,4.521083,4.783934,4.477283,4.640081,4.785927};
+vector<float> g_40SiPM_1_sw1_constBL = {1,5.057210,4.952975,4.914601,4.745170,5.006344,4.695190,4.671079,4.845346};
+
+vector<float> g_40SiPM_2_sw4_constBL = {1,4.367106,4.278874,4.324155,4.502402,4.770954,4.676074,4.684658,4.699855};
+vector<float> g_40SiPM_2_sw2_constBL = {1,4.384197,4.294646,4.372352,4.479390,4.659250,4.775097,4.811665,4.681038};
+vector<float> g_40SiPM_2_sw1_constBL = {1,4.484410,4.304996,4.311017,4.451629,4.779645,4.873369,4.759235,4.637783};
+
+vector<float> calib_amp_dummy(16,1);
+
+vector<float> calib_amp = g_8SiPM_17_dynBL_HV59;
+
+/*
+__ BASELINE SHIFT VALUES of indiv. arrays _______________________________
+*/
+vector<float> BL_shift_8SiPM_1_run51 = {0,-1.347619,-0.503938,-0.563570,-0.421087,-0.527824,-0.626668,-0.498493,-0.923212};
+vector<float> BL_shift_8SiPM_2_run52 = {0,-1.338460,-0.708778,-0.553848,-0.777716,-0.929497,-0.588786,-0.525951,-0.583667};
+vector<float> BL_shift_8SiPM_17_run32 = {0,-0.894130,-0.298793,-0.335816,-0.244168,-0.228734,-0.350240,-0.098579,-0.251705};
+
+vector<float> BL_shift_8SiPM_17_run57_HV56 = {0,-0.645652,-0.096661,-0.069783,-0.012360,-0.018906,-0.135682,0.098434,-0.122733};
+vector<float> BL_shift_8SiPM_17_run54_HV57 = {0,-0.664145,-0.127923,-0.102607,-0.036950,-0.054989,-0.175302,0.061189,-0.136929};
+vector<float> BL_shift_8SiPM_17_run55_HV58 = {0,-0.702267,-0.164472,-0.159815,-0.051495,-0.082261,-0.225175,0.033823,-0.142871};
+vector<float> BL_shift_8SiPM_17_run56_HV59 = {0,-0.777759,-0.181139,-0.217059,-0.103472,-0.136753,-0.275943,0.000302,-0.198927};
+vector<float> BL_shift_8SiPM_17_run53_HV60 = {0,-0.853458,-0.264629,-0.332783,-0.177919,-0.201986,-0.356012,-0.061629,-0.212546};
+vector<float> BL_shift_8SiPM_17_run63_HV61 = {0,-1.055880,-0.352358,-0.540187,-0.297888,-0.362430,-0.560380,-0.210956,-0.348794};
+
+vector<float> BL_shift_40SiPM_1_sw4_run38 = {0,-1.269104,-0.613759,-0.406221,-0.664414,-0.747090,-0.523321,-0.540161,-0.660863};
+vector<float> BL_shift_40SiPM_1_sw2_run39 = {0,-1.030745,-0.384704,-0.228097,-0.361703,-0.572680,-0.333203,-0.330794,-0.49887};
+vector<float> BL_shift_40SiPM_1_sw2_run41 = {0,-1.009915,-0.391341,-0.184119,-0.341918,-0.508204,-0.340291,-0.292745,-0.489331};
+vector<float> BL_shift_40SiPM_1_sw1_run42 = {0,-0.853001,-0.283740,-0.073848,-0.203796,-0.349942,-0.193949,-0.172469,-0.338451};
+vector<float> BL_shift_40SiPM_1_sw1_run43 = {0,-0.885457,-0.373082,-0.202642,-0.309442,-0.450317,-0.205849,-0.285526,-0.422478};
+
+vector<float> BL_shift_40SiPM_2_sw4_run44 = {0,-1.000876,-0.454525,-0.354981,-0.455208,-0.715616,-0.494147,-0.480527,-0.688425};
+vector<float> BL_shift_40SiPM_2_sw2_run47 = {0,-0.852014,-0.283640,-0.281441,-0.185205,-0.313035,-0.418639,-0.178663,-0.371231};
+vector<float> BL_shift_40SiPM_2_sw1_run50 = {0,-0.751363,-0.200432,-0.143382,-0.098068,-0.177394,-0.272392,-0.088074,-0.218430};
+
+vector<float> BL_shift_dummy(9,0);
+
+vector<float> BL_shift = BL_shift_8SiPM_17_run56_HV59;
+
+// clibrated sum
+int amp_array_printRate = 1000;
+
+int wavesPrintRate = 1000;
 int sumWOMAPrintRate = 1000000;
-int sumWOMBPrintRate = 500;
+int sumWOMBPrintRate = 1000000;
 int ch0PrintRate = 1000000;
 int trigPrintRate = 1000000;//100
 int signalPrintRate = 100000;//100
@@ -134,6 +211,12 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   Int_t ChannelNr[16];
   Int_t WOMID[16];  //1=A, 2=B, 3=C, 4=D
   float PE_WOM1, PE_WOM2;
+
+  // clibrated sum
+  float amp_array; // clibrated sum 
+  Float_t t_amp_array_invCFD = -999;
+  Float_t t_amp_array_invCFD_wrtTrig = -999;
+
   std::vector<float> amp(16,-999);
   std::vector<float> amp_max(16,-999);
   std::vector<float> amp_inRange(16,-999);
@@ -157,7 +240,6 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   Float_t BL_pValue_used[16];
 
   float BL_output[4];//array used for output getBL-function
-  float Integral_0_300[16];//array used to store Integral of signal from 0 to 300ns
 
   int nPeaks = 4; // maximum number of peaks to be stored by peakfinder; has to be set also when creating branch
   Double_t peakX[16][nPeaks];
@@ -165,6 +247,8 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
 
   float Integral[16];
   float Integral_mVns[16];
+  float Integral_0_300[16]; //array used to store Integral of signal from 0 to 300ns
+  float Integral_inRange[16];
   int NumberOfBins;
   Int_t EventIDsamIndex[16];
   Int_t FirstCellToPlotsamIndex[16];
@@ -202,8 +286,8 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   }
   Short_t amplValues[16][1024];
   TH1F hCh("hCh","dummy;ns;Amplitude, mV",1024,-0.5*SP,1023.5*SP);
-  TString plotSaveFolder  = _outFile;
-  plotSaveFolder.ReplaceAll("out.root","");
+  TString plotSaveFolder  = _inDataFolder;
+  plotSaveFolder.ReplaceAll("data","runs");
   TCanvas cWaves("cWaves","cWaves",1000,700);
   cWaves.Divide(4,4);
   TCanvas csumWOMA("csumWOMA","csumWOMA",1000,700);
@@ -216,6 +300,10 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   cTrig.Divide(2,2);
   TCanvas cSignal("cSignal","cSignal",1500,900);
   cSignal.Divide(2,2);
+
+  // clibrated sum
+  TCanvas C_amp_array("C_amp_array","C_amp_array",1000,700);
+  C_amp_array.Divide(3,3);
 
   /*Create branches in the root-tree for the data.*/
   tree->Branch("EventNumber",&EventNumber, "EventNumber/I");
@@ -286,10 +374,16 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   tree->Branch("peakX",peakX,"peakX[nCh][4]/D");
   tree->Branch("peakY",peakY,"peakY[nCh][4]/D");
   tree->Branch("Integral_0_300", Integral_0_300, "Integral_0_300[nCh]/F");
+  tree->Branch("Integral_inRange", Integral_inRange, "Integral_inRange[nCh]/F");
   tree->Branch("Integral", Integral, "Integral[nCh]/F");
   tree->Branch("Integral_mVns", Integral_mVns, "Integral_mVns[nCh]/F");
   tree->Branch("EventIDsamIndex",EventIDsamIndex, "EventIDsamIndex[nCh]/I");
   tree->Branch("FirstCellToPlotsamIndex",FirstCellToPlotsamIndex, "FirstCellToPlotsamIndex[nCh]/I");
+
+  // clibrated sum
+  tree->Branch("t_amp_array_invCFD",&t_amp_array_invCFD,"t_amp_array_invCFD/F");
+  tree->Branch("t_amp_array_invCFD_wrtTrig",&t_amp_array_invCFD_wrtTrig,"t_amp_array_invCFD_wrtTrig/F");
+  tree->Branch("amp_array",&amp_array, "amp_array/F");
 
   /*Start reading the raw data from .bin files.*/
   int nitem = 1;
@@ -297,6 +391,9 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   TString fileName;
   inList.open(_inFileList);
   assert(inList.is_open());
+
+  // clibrated sum
+  int amp_array_PrintStatus=-1;
 
   int wavePrintStatus=-1;
   int sumWOMAPrintStatus=-1;
@@ -462,6 +559,19 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         BL_Chi2_upper[i] = BL_output[2];
         BL_pValue_upper[i] = BL_output[3];
 
+        if (BL_Chi2_upper[i] <= BL_Chi2_lower[i])
+        {
+          BL_used[i] = BL_upper[i];
+          BL_Chi2_used[i] = BL_Chi2_upper[i];
+          BL_pValue_used[i] = BL_pValue_upper[i];
+        }
+        else
+        {
+          BL_used[i] = BL_lower[i];
+          BL_pValue_used[i] = BL_pValue_lower[i];
+          BL_Chi2_used[i] = BL_Chi2_lower[i];
+        }
+
         /*
         __ Peakfinder _________________________________________________________
         Implemented to search double-muon-event candiates
@@ -486,7 +596,7 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         {
           for (int j = 0; j < nPeaks; ++j)
           {
-            peakY[i][j] = amp2pe(peakY[i][j], calib_amp_AB[i],BL_upper[i], BL_lower[i], BL_Chi2_upper[i], BL_Chi2_lower[i]);
+            peakY[i][j] = amp2pe(peakY[i][j], calib_amp[i], BL_used[i]);
           }
         }
 
@@ -497,16 +607,23 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         __ Max. Amplitude in Range __________________________________________
         Record maximum amplitude in range before expected signal (100-130 ns)
         */
-        amp_inRange[i] = max_inRange(&hCh,0,50);
+        // if (i!=2)
+        // {
+        //   amp_inRange[i] = max_inRange(&hCh,100,150);
+        //   // convert p.e. and BL-correct
+        //   amp_inRange[i] = amp2pe(amp_inRange[i], calib_amp[i], BL_shift[i]);
+        // }
+        amp_inRange[i] = max_inRange(&hCh,145,165);
         // convert p.e. and BL-correct
-        amp_inRange[i] = amp2pe(amp_inRange[i], calib_amp_AB[i],BL_upper[i], BL_lower[i], BL_Chi2_upper[i], BL_Chi2_lower[i]);
+        amp_inRange[i] = amp2pe(amp_inRange[i], calib_amp[i], BL_shift[i]);
         
+        Integral_inRange[i] = integral(&hCh,145,170,BL_shift[i]) / g_8SiPM_17_constBL_Charge_HV59[i];
         /*
         __ CFD _____________________________________________________________
         Setting the signal time by using a constant fraction disriminator method.
         The SiPM and the trigger sinals are handled differently using different thresholds.
         */
-        if (i == 15){ //trigger
+        if (i == 0){ //trigger
           t[i] = CDF(&hCh,0.5);
         }
         else { //SiPMs
@@ -546,8 +663,14 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
           csumWOMA.cd(i+1);
           hCh.DrawCopy();
       }
-      if(EventNumber%sumWOMBPrintRate==0&&i>6){
+      if(EventNumber%sumWOMBPrintRate==0 && i>6){
          csumWOMB.cd(i-6);
+         hCh.DrawCopy();
+      }
+      // clibrated sum
+      // if(EventNumber%amp_array_printRate==0 && (i>0 && i!=8)){
+      if(EventNumber%amp_array_printRate==0 && (i>0)){
+         C_amp_array.cd(i);
          hCh.DrawCopy();
       }
 
@@ -562,26 +685,26 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         Integral_0_300[i] = (hCh.Integral(1, 1024, "width")-0.0*1024*SP);
         if (BL_Chi2_upper[i] <= BL_Chi2_lower[i]){
         	Integral[i] = Integrate_50ns(&hCh, BL_upper[i]);
-        	amp[i] = PE(&hCh,calib_amp_AB.at(i),BL_upper[i], 100.0, 150.0);
+        	amp[i] = PE(&hCh,calib_amp.at(i),BL_upper[i], 180.0, 230.0);
           // amp[i] = PE(&hCh,calib_amp_AB.at(i),BL_upper[i], t[i]-20, t[i]+30);
-          BL_used[i] = BL_upper[i];
-          BL_Chi2_used[i] = BL_Chi2_upper[i];
-          BL_pValue_used[i] = BL_pValue_upper[i];
+          // BL_used[i] = BL_upper[i];
+          // BL_Chi2_used[i] = BL_Chi2_upper[i];
+          // BL_pValue_used[i] = BL_pValue_upper[i];
           hCh.GetXaxis()->SetRange((t[i]-20)/SP,(t[i]+30)/SP);
           int max_bin = hCh.GetMaximumBin();
-          amp_max[i] = (hCh.GetBinContent(max_bin)-BL_upper[i])/calib_amp_AB_max.at(i);
+          amp_max[i] = (hCh.GetBinContent(max_bin)-BL_upper[i])/calib_amp.at(i);
           hCh.GetXaxis()->SetRange(0,1024);
         }
         else{
         	Integral[i] = Integrate_50ns(&hCh, BL_lower[i]);
-         	amp[i] = PE(&hCh,calib_amp_AB.at(i),BL_lower[i], 100.0, 150.0);
+         	amp[i] = PE(&hCh,calib_amp.at(i),BL_lower[i], 180.0, 230.0);
           // amp[i] = PE(&hCh,calib_amp_AB.at(i),BL_lower[i], t[i]-20, t[i]+30);
-          BL_used[i] = BL_lower[i];
-          BL_Chi2_used[i] = BL_Chi2_lower[i];
-          BL_pValue_used[i] = BL_pValue_lower[i];
+          // BL_used[i] = BL_lower[i];
+          // BL_Chi2_used[i] = BL_Chi2_lower[i];
+          // BL_pValue_used[i] = BL_pValue_lower[i];
           hCh.GetXaxis()->SetRange((t[i]-20)/SP,(t[i]+30)/SP);
           int max_bin = hCh.GetMaximumBin();
-          amp_max[i] = (hCh.GetBinContent(max_bin)-BL_lower[i])/calib_amp_AB_max.at(i);
+          amp_max[i] = (hCh.GetBinContent(max_bin)-BL_lower[i])/calib_amp.at(i);
           hCh.GetXaxis()->SetRange(0,1024);
         }
 
@@ -648,6 +771,41 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         */
       }
 
+      /*
+      __ Calibrated SUM SIGNAL of all channels ______________
+      */
+
+      // clibrated sum
+      TH1F hSum("hSum","Calibrated Sum ;ns;Amplitude in npe",1024,-0.5*SP,1023.5*SP);
+      for(int hSumIndex=1;hSumIndex<9;hSumIndex++){
+        // if (hSumIndex!=2)
+        // {
+        //   TF1* f_const = new TF1("f_const","pol0",0,320);
+        // f_const->SetParameter(0,BL_shift[hSumIndex]);
+
+        // hChtemp.at(hSumIndex).Add(f_const, -1);
+        // hChtemp.at(hSumIndex).Scale(1.0/calib_amp.at(hSumIndex));
+
+        // hSum.Add(&hChtemp.at(hSumIndex),1);
+        // }
+        TF1* f_const = new TF1("f_const","pol0",0,320);
+        f_const->SetParameter(0,BL_shift[hSumIndex]);
+
+        hChtemp.at(hSumIndex).Add(f_const, -1);
+        hChtemp.at(hSumIndex).Scale(1.0/calib_amp.at(hSumIndex));
+
+        hSum.Add(&hChtemp.at(hSumIndex),1);
+        
+      }
+
+      amp_array = max_inRange(&hSum, 130, 180.0);
+      // amp_array = 8.0/7.0 * max_inRange(&hSum, 100.0, 150.0);
+      C_amp_array.cd(9);
+      hSum.DrawCopy();
+
+      t_amp_array_invCFD = CFDinvert2(&hSum,0.4);
+      t_amp_array_invCFD_wrtTrig = trigT-t_amp_array_invCFD;
+
       /* Filling Sum Histograms for WOM A and B and determine time Resolution */
       /*
       TH1F hSumA("hSumA","Sum A;ns;Amplitude, mV",1024,-0.5*SP,1023.5*SP);
@@ -660,23 +818,23 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
       tsumWOMA_invCFD = CFDinvert2(&hSumA,0.4);
       tsumWOMA_invCFD_wrtTrig = trigT-tsumWOMA_invCFD;
 */
-      TH1F hSumB("hSumB","Sum B;ns;Amplitude, mV",1024,-0.5*SP,1023.5*SP);
-      for(int hSumIndexB=7;hSumIndexB<15;hSumIndexB++){
-        TF1* f_const = new TF1("f_const","pol0",0,320);
-        f_const->SetParameter(0,BL_used[hSumIndexB]);
+      // TH1F hSumB("hSumB","Sum B;ns;Amplitude, mV",1024,-0.5*SP,1023.5*SP);
+      // for(int hSumIndexB=7;hSumIndexB<15;hSumIndexB++){
+      //   TF1* f_const = new TF1("f_const","pol0",0,320);
+      //   f_const->SetParameter(0,BL_used[hSumIndexB]);
 
-        hChtemp.at(hSumIndexB).Add(f_const, -1);
-        hChtemp.at(hSumIndexB).Scale(1.0/calib_amp_AB.at(hSumIndexB));
+      //   hChtemp.at(hSumIndexB).Add(f_const, -1);
+      //   hChtemp.at(hSumIndexB).Scale(1.0/calib_amp.at(hSumIndexB));
 
-        hSumB.Add(&hChtemp.at(hSumIndexB),1);
-      }
+      //   hSumB.Add(&hChtemp.at(hSumIndexB),1);
+      // }
 
-      PE_WOM2 = PE(&hSumB,1,0, 100.0, 150.0);
-      csumWOMB.cd(9);
-      hSumB.DrawCopy();
+      // PE_WOM2 = PE(&hSumB,1,0, 100.0, 150.0);
+      // csumWOMB.cd(9);
+      // hSumB.DrawCopy();
 
-      tsumWOMB_invCFD = CFDinvert2(&hSumB,0.4);
-      tsumWOMB_invCFD_wrtTrig = trigT-tsumWOMB_invCFD;
+      // tsumWOMB_invCFD = CFDinvert2(&hSumB,0.4);
+      // tsumWOMB_invCFD_wrtTrig = trigT-tsumWOMB_invCFD;
 /*
       */
       /* end */
@@ -721,7 +879,7 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
       */
 
       /*Saving the plotted signals/events to a new page in the .pdf file.*/
-      if(EventNumber%wavesPrintRate==0 && (PE_WOM2)<10) {
+      if(EventNumber%wavesPrintRate==0) {
         if(wavePrintStatus<0){
           cWaves.Print((TString)(plotSaveFolder+"/waves.pdf("),"pdf");
           wavePrintStatus=0;
@@ -735,7 +893,7 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         }
         else csumWOMA.Print((TString)(plotSaveFolder+"/sumWOMA.pdf"),"pdf");
       }
-      if(EventNumber%sumWOMBPrintRate==0 && (PE_WOM2)<10){
+      if(EventNumber%sumWOMBPrintRate==0){
         if(sumWOMBPrintStatus<0){
            csumWOMB.Print((TString)(plotSaveFolder+"/sumWOMB.pdf("),"pdf");
            sumWOMBPrintStatus=0;
@@ -757,6 +915,15 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
         else cSignal.Print((TString)(plotSaveFolder+"/signal.pdf"),"pdf");
       }
 
+      // clibrated sum
+      if(EventNumber%amp_array_printRate==0){
+        if(amp_array_PrintStatus<0){
+           C_amp_array.Print((TString)(plotSaveFolder+"/amp_array.pdf("),"pdf");
+           amp_array_PrintStatus=0;
+        }
+        else C_amp_array.Print((TString)(plotSaveFolder+"/amp_array.pdf"),"pdf");
+      }
+
       /*Writing the data for that event to the tree.*/
       tree->Fill();
     }
@@ -774,6 +941,10 @@ void read(TString _inFileList, TString _inDataFolder, TString _outFile){
   cCh0.Print((TString)(plotSaveFolder+"/ch0.pdf)"),"pdf");
   cTrig.Print((TString)(plotSaveFolder+"/trig.pdf)"),"pdf");
   cSignal.Print((TString)(plotSaveFolder+"/signal.pdf)"),"pdf");
+
+  // clibrated sum
+  C_amp_array.Clear();
+  C_amp_array.Print((TString)(plotSaveFolder+"/amp_array.pdf)"),"pdf");
 
   /* temporary for cfdScan
   TH1F* sigma_timeRes_Fit = new TH1F("sigma_timeRes_Fit",";CFD threshold;Timeresolution, ns",N_CFD_points,0,0.01*N_CFD_points);
